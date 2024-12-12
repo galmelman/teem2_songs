@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Playlist Voting</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .song {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .song img {
+            max-width: 100px;
+            max-height: 100px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vote for Your Favorite Songs</h1>
+
+    <form id="add-song-form">
+        <h2>Add a New Song</h2>
+        <label for="song-title">Song Title:</label><br>
+        <input type="text" id="song-title" name="title" required><br>
+
+        <label for="song-picture">Picture (URL):</label><br>
+        <input type="url" id="song-picture" name="picture"><br>
+
+        <label for="user-name">Your Name:</label><br>
+        <input type="text" id="user-name" name="name" required><br>
+
+        <button type="submit">Add Song</button>
+    </form>
+
+    <h2>Song Playlist</h2>
+    <div id="song-list"></div>
+
+    <script>
+        let songs = [];
+
+        // Function to render the song list
+        function renderSongs() {
+            const songList = document.getElementById('song-list');
+            songList.innerHTML = '';
+
+            songs.forEach((song, index) => {
+                const songDiv = document.createElement('div');
+                songDiv.className = 'song';
+
+                const img = document.createElement('img');
+                img.src = song.picture || 'https://via.placeholder.com/100';
+                img.alt = song.title;
+                songDiv.appendChild(img);
+
+                const title = document.createElement('span');
+                title.textContent = `${song.title} (Votes: ${song.votes})`;
+                songDiv.appendChild(title);
+
+                const voteButton = document.createElement('button');
+                voteButton.textContent = 'Vote';
+                voteButton.onclick = () => {
+                    song.votes++;
+                    renderSongs();
+                };
+                songDiv.appendChild(voteButton);
+
+                songList.appendChild(songDiv);
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('add-song-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('song-title').value;
+            const picture = document.getElementById('song-picture').value;
+            const name = document.getElementById('user-name').value;
+
+            songs.push({
+                title,
+                picture,
+                addedBy: name,
+                votes: 0
+            });
+
+            document.getElementById('add-song-form').reset();
+            renderSongs();
+        });
+
+        // Initial render
+        renderSongs();
+    </script>
+</body>
+</html>
