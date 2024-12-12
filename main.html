@@ -1,105 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Song Playlist Voting</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            line-height: 1.6;
-        }
-        form {
-            margin-bottom: 20px;
-        }
-        .song {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .song img {
-            max-width: 100px;
-            max-height: 100px;
-            margin-right: 10px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Vote for Your Favorite Songs</h1>
+from flask import Flask, request, jsonify
 
-    <form id="add-song-form">
-        <h2>Add a New Song</h2>
-        <label for="song-title">Song Title:</label><br>
-        <input type="text" id="song-title" name="title" required><br>
+app = Flask(__name__)
 
-        <label for="song-picture">Picture (URL):</label><br>
-        <input type="url" id="song-picture" name="picture"><br>
+# In-memory storage for songs
+songs = []
 
-        <label for="user-name">Your Name:</label><br>
-        <input type="text" id="user-name" name="name" required><br>
+# Route to add a new song
+@app.route('/add_song', methods=['POST'])
+def add_song():
+    data = request.json
+    title = data.get('title')
+    picture = data.get('picture', '')
+    added_by = data.get('added_by')
 
-        <button type="submit">Add Song</button>
-    </form>
+    if not title or not added_by:
+        return jsonify({'error': 'Title and added_by are required'}), 400
 
-    <h2>Song Playlist</h2>
-    <div id="song-list"></div>
+    song = {
+        'id': len(songs) + 1,
+        'title': title,
+        'picture': picture,
+        'added_by': added_by,
+        'votes': 0
+    }
+    songs.append(song)
+    return jsonify({'message': 'Song added successfully', 'song': song}), 201
 
-    <script>
-        let songs = [];
+# Route to get all songs
+@app.route('/get_songs', methods=['GET'])
+def get_songs():
+    return jsonify({'songs': songs}), 200
 
-        // Function to render the song list
-        function renderSongs() {
-            const songList = document.getElementById('song-list');
-            songList.innerHTML = '';
+# Route to vote for a song
+@app.route('/vote_song/<int:song_id>', methods=['POST'])
+def vote_song(song_id):
+    for song in songs:
+        if song['id'] == song_id:
+            song['votes'] += 1
+            return jsonify({'message': 'Vote added', 'song': song}), 200
 
-            songs.forEach((song, index) => {
-                const songDiv = document.createElement('div');
-                songDiv.className = 'song';
+    return jsonify({'error': 'Song not found'}), 404
 
-                const img = document.createElement('img');
-                img.src = song.picture || 'https://via.placeholder.com/100';
-                img.alt = song.title;
-                songDiv.appendChild(img);
-
-                const title = document.createElement('span');
-                title.textContent = `${song.title} (Votes: ${song.votes})`;
-                songDiv.appendChild(title);
-
-                const voteButton = document.createElement('button');
-                voteButton.textContent = 'Vote';
-                voteButton.onclick = () => {
-                    song.votes++;
-                    renderSongs();
-                };
-                songDiv.appendChild(voteButton);
-
-                songList.appendChild(songDiv);
-            });
-        }
-
-        // Handle form submission
-        document.getElementById('add-song-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const title = document.getElementById('song-title').value;
-            const picture = document.getElementById('song-picture').value;
-            const name = document.getElementById('user-name').value;
-
-            songs.push({
-                title,
-                picture,
-                addedBy: name,
-                votes: 0
-            });
-
-            document.getElementById('add-song-form').reset();
-            renderSongs();
-        });
-
-        // Initial render
-        renderSongs();
-    </script>
-</body>
-</html>
+if __name__ == '__main__':
+    app.run(debug=True)
