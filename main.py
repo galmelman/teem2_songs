@@ -209,7 +209,7 @@ if init_db():
                 if st.button(f"Vote for {song_title}", key=f"vote_{song_id}"):
                     if vote_for_song_in_db(song_id):
                         st.success(f"Voted for {song_title}!")
-                        st.experimental_rerun()
+                        #st.experimental_rerun()
 
     if menu == "Add Song":
         # Add a new song
@@ -280,7 +280,7 @@ if init_db():
                 if filtered_params:
                     if edit_song_in_db(song_id, **filtered_params):
                         st.success("Song updated successfully!")
-                        st.experimental_rerun()
+                        #st.experimental_rerun()
                     else:
                         st.error("Failed to update song.")
             
