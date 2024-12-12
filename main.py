@@ -37,11 +37,14 @@ st.title("Song Playlist Voting")
 # Add a new song
 st.header("Add a New Song")
 title = st.text_input("Song Title")
-picture = st.text_input("Picture URL (optional)")
+picture = st.file_uploader("Upload a Picture (optional)", type=["png", "jpg", "jpeg"])
 added_by = st.text_input("Your Name")
 
 if st.button("Add Song"):
-    result = add_song(title, picture, added_by)
+    picture_url = None
+    if picture:
+        picture_url = f"data:image/jpeg;base64,{picture.getvalue().decode('latin1')}"
+    result = add_song(title, picture_url, added_by)
     if 'error' in result:
         st.error(result['error'])
     else:
@@ -56,7 +59,7 @@ for song in songs_data:
         st.image(song['picture'], width=100)
     st.write(f"Added by: {song['added_by']}")
     st.write(f"Votes: {song['votes']}")
-    if st.button(f"Vote for {song['title']}", key=song['id']):
+    if st.button(f"Vote for {song['title']}", key=f"vote_{song['id']}"):
         vote_result = vote_song(song['id'])
         if 'error' in vote_result:
             st.error(vote_result['error'])
