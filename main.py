@@ -292,11 +292,10 @@ if init_db():
             if st.button("Delete this Song", type="primary"):
                 # Confirm deletion
                 if st.checkbox("I confirm I want to delete this song"):
-                    if delete_song_from_db(song_id):
-                        st.success("Song deleted successfully!")
-                        st.experimental_rerun()
-                    else:
-                        st.error("Failed to delete song.")
+                    delete_song_from_db(song_id):
+                    st.success("Song deleted successfully!")
+                    st.experimental_rerun()
+                    
 
 else:
     st.error("Failed to initialize database. Please check permissions and try again.")
