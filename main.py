@@ -2,7 +2,7 @@ import os
 import sqlite3
 import streamlit as st
 
-# Database setup
+# Database setup with migration support
 def get_db_connection():
     """Create a database connection with proper error handling."""
     try:
@@ -13,6 +13,34 @@ def get_db_connection():
     except sqlite3.Error as e:
         st.error(f"Error connecting to database: {e}")
         return None
+
+def migrate_db():
+    """Migrate database schema to latest version."""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return False
+        
+        c = conn.cursor()
+        
+        # Check existing columns
+        c.execute("PRAGMA table_info(songs)")
+        columns = [column[1] for column in c.fetchall()]
+        
+        # Add missing columns if not exist
+        if 'url' not in columns:
+            try:
+                c.execute('ALTER TABLE songs ADD COLUMN url TEXT')
+            except sqlite3.OperationalError:
+                # Column might already exist or can't be added
+                pass
+        
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.Error as e:
+        st.error(f"Error migrating database: {e}")
+        return False
 
 def init_db():
     """Initialize the database with error handling."""
@@ -27,17 +55,18 @@ def init_db():
             title TEXT NOT NULL,
             picture BLOB,
             added_by TEXT NOT NULL,
-            votes INTEGER DEFAULT 0,
-            url TEXT
+            votes INTEGER DEFAULT 0
         )''')
         conn.commit()
         conn.close()
-        return True
+        
+        # Attempt migration
+        return migrate_db()
     except sqlite3.Error as e:
         st.error(f"Error initializing database: {e}")
         return False
 
-def add_song_to_db(title, picture, added_by, url):
+def add_song_to_db(title, picture, added_by, url=None):
     """Add a song to the database with error handling."""
     try:
         conn = get_db_connection()
@@ -45,8 +74,13 @@ def add_song_to_db(title, picture, added_by, url):
             return False
         
         c = conn.cursor()
-        c.execute('INSERT INTO songs (title, picture, added_by, votes, url) VALUES (?, ?, ?, 0, ?)', 
-                  (title, picture, added_by, url))
+        # Use INSERT with optional url
+        if url:
+            c.execute('INSERT INTO songs (title, picture, added_by, votes, url) VALUES (?, ?, ?, 0, ?)', 
+                      (title, picture, added_by, url))
+        else:
+            c.execute('INSERT INTO songs (title, picture, added_by, votes) VALUES (?, ?, ?, 0)', 
+                      (title, picture, added_by))
         conn.commit()
         conn.close()
         return True
@@ -62,7 +96,17 @@ def get_songs_from_db():
             return []
         
         c = conn.cursor()
-        c.execute('SELECT id, title, picture, added_by, votes, url FROM songs ORDER BY votes DESC')
+        # Dynamically check columns to handle different schema versions
+        c.execute("PRAGMA table_info(songs)")
+        columns = [column[1] for column in c.fetchall()]
+        
+        # Construct query based on available columns
+        if 'url' in columns:
+            query = 'SELECT id, title, picture, added_by, votes, url FROM songs ORDER BY votes DESC'
+        else:
+            query = 'SELECT id, title, picture, added_by, votes, NULL FROM songs ORDER BY votes DESC'
+        
+        c.execute(query)
         songs = c.fetchall()
         conn.close()
         return songs
