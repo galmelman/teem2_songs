@@ -1,20 +1,12 @@
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
+import streamlit as st
 
 # In-memory storage for songs
 songs = []
 
-# Route to add a new song
-@app.route('/add_song', methods=['POST'])
-def add_song():
-    data = request.json
-    title = data.get('title')
-    picture = data.get('picture', '')
-    added_by = data.get('added_by')
-
+# Function to add a new song
+def add_song(title, picture, added_by):
     if not title or not added_by:
-        return jsonify({'error': 'Title and added_by are required'}), 400
+        return {'error': 'Title and added_by are required'}
 
     song = {
         'id': len(songs) + 1,
@@ -24,22 +16,49 @@ def add_song():
         'votes': 0
     }
     songs.append(song)
-    return jsonify({'message': 'Song added successfully', 'song': song}), 201
+    return {'message': 'Song added successfully', 'song': song}
 
-# Route to get all songs
-@app.route('/get_songs', methods=['GET'])
+# Function to get all songs
 def get_songs():
-    return jsonify({'songs': songs}), 200
+    return {'songs': songs}
 
-# Route to vote for a song
-@app.route('/vote_song/<int:song_id>', methods=['POST'])
+# Function to vote for a song
 def vote_song(song_id):
     for song in songs:
         if song['id'] == song_id:
             song['votes'] += 1
-            return jsonify({'message': 'Vote added', 'song': song}), 200
+            return {'message': 'Vote added', 'song': song}
 
-    return jsonify({'error': 'Song not found'}), 404
+    return {'error': 'Song not found'}
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Streamlit app
+st.title("Song Playlist Voting")
+
+# Add a new song
+st.header("Add a New Song")
+title = st.text_input("Song Title")
+picture = st.text_input("Picture URL (optional)")
+added_by = st.text_input("Your Name")
+
+if st.button("Add Song"):
+    result = add_song(title, picture, added_by)
+    if 'error' in result:
+        st.error(result['error'])
+    else:
+        st.success(result['message'])
+
+# Display all songs
+st.header("Song Playlist")
+songs_data = get_songs()['songs']
+for song in songs_data:
+    st.subheader(song['title'])
+    if song['picture']:
+        st.image(song['picture'], width=100)
+    st.write(f"Added by: {song['added_by']}")
+    st.write(f"Votes: {song['votes']}")
+    if st.button(f"Vote for {song['title']}", key=song['id']):
+        vote_result = vote_song(song['id'])
+        if 'error' in vote_result:
+            st.error(vote_result['error'])
+        else:
+            st.success(vote_result['message'])
