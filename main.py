@@ -1,35 +1,44 @@
+import sqlite3
 import streamlit as st
 
-# In-memory storage for songs
-songs = []
+# Database setup
+def init_db():
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        picture BLOB,
+        added_by TEXT NOT NULL,
+        votes INTEGER DEFAULT 0
+    )''')
+    conn.commit()
+    conn.close()
 
-# Function to add a new song
-def add_song(title, picture, added_by):
-    if not title or not added_by:
-        return {'error': 'Title and added_by are required'}
+def add_song_to_db(title, picture, added_by):
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO songs (title, picture, added_by, votes) VALUES (?, ?, ?, 0)', (title, picture, added_by))
+    conn.commit()
+    conn.close()
 
-    song = {
-        'id': len(songs) + 1,
-        'title': title,
-        'picture': picture,
-        'added_by': added_by,
-        'votes': 0
-    }
-    songs.append(song)
-    return {'message': 'Song added successfully', 'song': song}
+def get_songs_from_db():
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute('SELECT id, title, picture, added_by, votes FROM songs')
+    songs = c.fetchall()
+    conn.close()
+    return songs
 
-# Function to get all songs
-def get_songs():
-    return {'songs': songs}
+def vote_for_song_in_db(song_id):
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute('UPDATE songs SET votes = votes + 1 WHERE id = ?', (song_id,))
+    conn.commit()
+    conn.close()
 
-# Function to vote for a song
-def vote_song(song_id):
-    for song in songs:
-        if song['id'] == song_id:
-            song['votes'] += 1
-            return {'message': 'Vote added', 'song': song}
-
-    return {'error': 'Song not found'}
+# Initialize database
+init_db()
 
 # Streamlit app
 st.title("Song Playlist Voting")
@@ -37,31 +46,29 @@ st.title("Song Playlist Voting")
 # Add a new song
 st.header("Add a New Song")
 title = st.text_input("Song Title")
-picture = st.file_uploader("Upload a Picture (optional)", type=["png", "jpg", "jpeg"])
+picture = st.file_uploader("Upload a Picture (optional)", type=["png", "jpg", "jpeg", "gif", "bmp"])
 added_by = st.text_input("Your Name")
 
 if st.button("Add Song"):
-    picture_url = None
+    picture_data = None
     if picture:
-        picture_url = f"data:image/jpeg;base64,{picture.getvalue().decode('latin1')}"
-    result = add_song(title, picture_url, added_by)
-    if 'error' in result:
-        st.error(result['error'])
+        picture_data = picture.read()
+    if title and added_by:
+        add_song_to_db(title, picture_data, added_by)
+        st.success("Song added successfully!")
     else:
-        st.success(result['message'])
+        st.error("Title and Name are required!")
 
 # Display all songs
 st.header("Song Playlist")
-songs_data = get_songs()['songs']
+songs_data = get_songs_from_db()
 for song in songs_data:
-    st.subheader(song['title'])
-    if song['picture']:
-        st.image(song['picture'], width=100)
-    st.write(f"Added by: {song['added_by']}")
-    st.write(f"Votes: {song['votes']}")
-    if st.button(f"Vote for {song['title']}", key=f"vote_{song['id']}"):
-        vote_result = vote_song(song['id'])
-        if 'error' in vote_result:
-            st.error(vote_result['error'])
-        else:
-            st.success(vote_result['message'])
+    song_id, song_title, song_picture, song_added_by, song_votes = song
+    st.subheader(song_title)
+    if song_picture:
+        st.image(song_picture, width=100)
+    st.write(f"Added by: {song_added_by}")
+    st.write(f"Votes: {song_votes}")
+    if st.button(f"Vote for {song_title}", key=f"vote_{song_id}"):
+        vote_for_song_in_db(song_id)
+        st.success(f"Voted for {song_title}!")
