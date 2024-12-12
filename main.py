@@ -182,6 +182,35 @@ if init_db():
     # Sidebar for navigation
     menu = st.sidebar.selectbox("Menu", ["Add Song", "View Playlist", "Edit/Delete Songs"])
 
+    def display_playlist():
+        """Display the playlist regardless of the menu selection."""
+        st.header("Song Playlist")
+        songs_data = get_songs_from_db()
+        if not songs_data:
+            st.write("No songs in the playlist yet. Add your first song!")
+        for song in songs_data:
+            song_id, song_title, song_picture, song_added_by, song_votes, song_url = song
+            # Create a container for each song
+            song_container = st.container()
+            with song_container:
+                st.subheader(song_title)
+                # Display image if exists
+                if song_picture:
+                    try:
+                        st.image(song_picture, width=100)
+                    except Exception as e:
+                        st.error(f"Error displaying picture: {e}")
+                # Display URL if exists
+                if song_url:
+                    st.write(f"[Listen here]({song_url})")
+                st.write(f"Added by: {song_added_by}")
+                st.write(f"Votes: {song_votes}")
+                # Vote button
+                if st.button(f"Vote for {song_title}", key=f"vote_{song_id}"):
+                    if vote_for_song_in_db(song_id):
+                        st.success(f"Voted for {song_title}!")
+                        st.experimental_rerun()
+
     if menu == "Add Song":
         # Add a new song
         st.header("Add a New Song")
@@ -202,42 +231,10 @@ if init_db():
                     st.error("Failed to add song. Please try again.")
             else:
                 st.error("Title and Name are required!")
+        display_playlist()
 
     elif menu == "View Playlist":
-        # Display all songs
-        st.header("Song Playlist")
-        songs_data = get_songs_from_db()
-
-        if not songs_data:
-            st.write("No songs in the playlist yet. Add your first song!")
-
-        for song in songs_data:
-            song_id, song_title, song_picture, song_added_by, song_votes, song_url = song
-            
-            # Create a container for each song
-            song_container = st.container()
-            with song_container:
-                st.subheader(song_title)
-                
-                # Display image if exists
-                if song_picture:
-                    try:
-                        st.image(song_picture, width=100)
-                    except Exception as e:
-                        st.error(f"Error displaying picture: {e}")
-                
-                # Display URL if exists
-                if song_url:
-                    st.write(f"[Listen here]({song_url})")
-                
-                st.write(f"Added by: {song_added_by}")
-                st.write(f"Votes: {song_votes}")
-                
-                # Vote button
-                if st.button(f"Vote for {song_title}", key=f"vote_{song_id}"):
-                    if vote_for_song_in_db(song_id):
-                        st.success(f"Voted for {song_title}!")
-                        st.experimental_rerun()
+        display_playlist()
 
     elif menu == "Edit/Delete Songs":
         st.header("Edit or Delete Songs")
@@ -292,10 +289,11 @@ if init_db():
             if st.button("Delete this Song", type="primary"):
                 # Confirm deletion
                 if st.checkbox("I confirm I want to delete this song"):
-                    delete_song_from_db(song_id):
-                    st.success("Song deleted successfully!")
-                    st.experimental_rerun()
-                    
+                    if delete_song_from_db(song_id):
+                        st.success("Song deleted successfully!")
+                        st.experimental_rerun()
+
+        display_playlist()
 
 else:
     st.error("Failed to initialize database. Please check permissions and try again.")
