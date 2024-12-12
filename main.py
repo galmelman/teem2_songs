@@ -291,7 +291,7 @@ if init_db():
                 if st.checkbox("I confirm I want to delete this song"):
                     if delete_song_from_db(song_id):
                         st.success("Song deleted successfully!")
-                        st.experimental_rerun()
+                        #st.experimental_rerun()
 
         display_playlist()
 
